@@ -1,0 +1,35 @@
+{
+  "name": "healthcare-server",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "build": "echo 'Build complete'",
+    "start": "node src/server.js",
+    "seed": "node src/scripts/seed.js",
+    "seed:indian": "node src/scripts/seedIndian.js",
+    "clean": "node src/scripts/cleanDatabase.js",
+    "fix-indexes": "node src/scripts/fixIndexes.js",
+    "test": "mocha",
+    "test:unit": "mocha",
+    "test:watch": "mocha --watch"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.0",
+    "mongoose": "^8.0.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.28.5",
+    "@babel/preset-env": "^7.28.5",
+    "@jest/globals": "^30.2.0",
+    "babel-jest": "^30.2.0",
+    "chai": "^6.2.1",
+    "jest": "^30.2.0",
+    "nodemon": "^3.0.2"
+  }
+}
