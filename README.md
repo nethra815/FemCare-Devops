@@ -22,8 +22,7 @@ A comprehensive MERN stack application for women's healthcare management, featur
 
 ### 1. Clone the Repository
 ```bash
-git clone git@github.com:nethra815/FemCare.git
-cd healthcare-mern
+git clone git@github.com:nethra815/FemCare-Devops.git
 ```
 
 ### 2. Install Dependencies
