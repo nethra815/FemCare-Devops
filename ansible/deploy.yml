@@ -3,5 +3,8 @@
   connection: local
 
   tasks:
+    - name: Stop old containers
+      command: docker-compose down
+
     - name: Run Docker Compose
       command: docker-compose up -d --build
