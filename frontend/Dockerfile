@@ -3,7 +3,8 @@ FROM node:18
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install
+
+RUN npm ci --include=optional
 
 COPY . .
 
@@ -11,4 +12,4 @@ RUN npm run build
 
 EXPOSE 5173
 
-CMD ["npm", "run", "preview", "--", "--port", "5173", "--host"]
+CMD ["npm", "run", "dev"]

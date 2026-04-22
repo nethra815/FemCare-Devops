@@ -1,5 +1,8 @@
 import mongoose from "mongoose"
 import dotenv from "dotenv"
+import { fileURLToPath } from "url"
+import { dirname, join } from "path"
+
 import User from "../models/User.js"
 import Patient from "../models/Patient.js"
 import Doctor from "../models/Doctor.js"
@@ -8,440 +11,414 @@ import Appointment from "../models/Appointment.js"
 import CycleData from "../models/CycleData.js"
 import Notification from "../models/Notification.js"
 import DoctorSchedule from "../models/DoctorSchedule.js"
-import { fileURLToPath } from 'url'
-import { dirname, join } from 'path'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
+dotenv.config({ path: join(__dirname, "../../.env") })
 
-dotenv.config({ path: join(__dirname, '../../.env') })
+const APPOINTMENT_SLOTS = [
+  ["09:00", "09:30"],
+  ["09:30", "10:00"],
+  ["10:00", "10:30"],
+  ["10:30", "11:00"],
+  ["11:00", "11:30"],
+  ["11:30", "12:00"],
+  ["14:00", "14:30"],
+  ["14:30", "15:00"],
+  ["15:00", "15:30"],
+  ["15:30", "16:00"],
+  ["16:00", "16:30"],
+  ["16:30", "17:00"],
+]
+
+const addDays = (date, days) => {
+  const next = new Date(date)
+  next.setDate(next.getDate() + days)
+  return next
+}
+
+const startOfDay = (date) => {
+  const d = new Date(date)
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+const endOfDay = (date) => {
+  const d = new Date(date)
+  d.setHours(23, 59, 59, 999)
+  return d
+}
+
+const isWeekend = (date) => date.getDay() === 0 || date.getDay() === 6
+
+const firstWorkingDayOffset = (baseDate, minOffset = 1) => {
+  let offset = minOffset
+  while (isWeekend(addDays(baseDate, offset))) {
+    offset += 1
+  }
+  return offset
+}
 
 const seedDatabase = async () => {
-  try {
-    await mongoose.connect(process.env.MONGODB_URI)
-    console.log("Connected to MongoDB")
+  const mongoUri = process.env.MONGODB_URI
 
-    // Clear existing data
-    console.log("\n🗑️  Clearing existing data...")
+  if (!mongoUri) {
+    console.error("MONGODB_URI is missing in backend/.env")
+    process.exit(1)
+  }
+
+  const connectionCandidates = [mongoUri]
+  if (mongoUri.includes("mongo:27017")) {
+    connectionCandidates.push(mongoUri.replace("mongo:27017", "localhost:27017"))
+  }
+
+  try {
+    let connectedUri = null
+    let lastError = null
+
+    for (const uri of connectionCandidates) {
+      try {
+        await mongoose.connect(uri)
+        connectedUri = uri
+        break
+      } catch (error) {
+        lastError = error
+      }
+    }
+
+    if (!connectedUri) {
+      throw lastError
+    }
+
+    console.log(`Connected to MongoDB: ${connectedUri}`)
+
+    console.log("\nClearing existing data...")
     await User.deleteMany({})
     await Appointment.deleteMany({})
     await CycleData.deleteMany({})
     await Notification.deleteMany({})
     await DoctorSchedule.deleteMany({})
-    console.log("✅ Existing data cleared")
+    console.log("Existing data cleared")
 
-    // Create Demo Admin
-    console.log("\n👤 Creating Demo Admin...")
-    const admin = new Administrator({
-      name: "Demo Admin",
-      email: "demo@admin.com",
+    const admin = await Administrator.create({
+      name: "Ananya Menon",
+      email: "admin@femcare.in",
       password: "demo123",
-      phone: "+91-9999999999",
+      phone: "+91-9000011111",
       role: "admin",
+      adminId: "TEMP_ADMIN",
     })
-    await admin.save()
     admin.adminId = admin.userId
     await admin.save()
-    console.log("✅ Demo Admin created: demo@admin.com / demo123")
 
-    // Create Demo Doctor
-    console.log("\n👨‍⚕️ Creating Demo Doctor...")
-    const doctorsData = [
+    const doctorsSeed = [
       {
-        name: "Demo Doctor",
-        email: "demo@doctor.com",
+        name: "Dr. Meera Nair",
+        email: "meera.nair@femcare.in",
         password: "demo123",
-        phone: "+91-9999999998",
+        phone: "+91-9000010001",
         specialization: "Gynecologist",
-        experience: 10,
-        location: "Mumbai, Maharashtra",
+        experience: 14,
+        location: "Kochi, Kerala",
         is_approved: true,
       },
       {
-        name: "Priya Sharma",
-        email: "priya@femcare.com",
-        password: "priya123",
-        phone: "+91-9876543211",
+        name: "Dr. Priyanka Sharma",
+        email: "priyanka.sharma@femcare.in",
+        password: "demo123",
+        phone: "+91-9000010002",
         specialization: "Obstetrician",
-        experience: 12,
-        location: "Delhi, NCR",
+        experience: 11,
+        location: "New Delhi, Delhi",
         is_approved: true,
       },
       {
-        name: "Anjali Patel",
-        email: "anjali@femcare.com",
-        password: "anjali123",
-        phone: "+91-9876543212",
+        name: "Dr. Kavita Kulkarni",
+        email: "kavita.kulkarni@femcare.in",
+        password: "demo123",
+        phone: "+91-9000010003",
         specialization: "Reproductive Endocrinologist",
-        experience: 8,
-        location: "Bangalore, Karnataka",
+        experience: 9,
+        location: "Pune, Maharashtra",
         is_approved: true,
       },
       {
-        name: "Sneha Gupta",
-        email: "sneha@femcare.com",
-        password: "sneha123",
-        phone: "+91-9876543213",
+        name: "Dr. Rhea Choudhury",
+        email: "rhea.choudhury@femcare.in",
+        password: "demo123",
+        phone: "+91-9000010004",
         specialization: "Maternal-Fetal Medicine",
         experience: 6,
-        location: "Pune, Maharashtra",
+        location: "Kolkata, West Bengal",
         is_approved: false,
       },
     ]
 
     const doctors = []
-    for (const docData of doctorsData) {
-      const doctor = new Doctor({
-        name: docData.name,
-        email: docData.email,
-        password: docData.password,
-        phone: docData.phone,
+    for (const entry of doctorsSeed) {
+      const doctor = await Doctor.create({
+        name: entry.name,
+        email: entry.email,
+        password: entry.password,
+        phone: entry.phone,
         role: "doctor",
-        specialization: docData.specialization,
-        experience: docData.experience,
-        location: docData.location,
-        is_approved: docData.is_approved,
+        specialization: entry.specialization,
+        experience: entry.experience,
+        location: entry.location,
+        is_approved: entry.is_approved,
       })
-      await doctor.save()
+
       doctor.doctorId = doctor.userId
       await doctor.save()
       doctors.push(doctor)
-      console.log(`✅ Dr. ${doctor.name} (${doctor.email} / ${docData.password}) - ${doctor.is_approved ? "Approved" : "Pending"}`)
     }
 
-    // Create Demo Patient
-    console.log("\n👩 Creating Demo Patient...")
-    const patientsData = [
+    const patientsSeed = [
       {
-        name: "Demo Patient",
-        email: "demo@patient.com",
+        name: "Nisha Verma",
+        email: "nisha.verma@femcare.in",
         password: "demo123",
-        phone: "+91-9999999997",
-        age: 28,
+        phone: "+91-9000020001",
+        age: 29,
         gender: "female",
-        weight: 58,
+        weight: 57,
+        height: 160,
+      },
+      {
+        name: "Aditi Rao",
+        email: "aditi.rao@femcare.in",
+        password: "demo123",
+        phone: "+91-9000020002",
+        age: 33,
+        gender: "female",
+        weight: 61,
+        height: 164,
+      },
+      {
+        name: "Pooja Iyer",
+        email: "pooja.iyer@femcare.in",
+        password: "demo123",
+        phone: "+91-9000020003",
+        age: 26,
+        gender: "female",
+        weight: 54,
+        height: 157,
+      },
+      {
+        name: "Ritika Gupta",
+        email: "ritika.gupta@femcare.in",
+        password: "demo123",
+        phone: "+91-9000020004",
+        age: 31,
+        gender: "female",
+        weight: 59,
         height: 162,
-      },
-      {
-        name: "Aarti Singh",
-        email: "aarti@example.com",
-        password: "aarti123",
-        phone: "+91-9876543221",
-        age: 32,
-        gender: "female",
-        weight: 55,
-        height: 158,
-      },
-      {
-        name: "Divya Kumar",
-        email: "divya@example.com",
-        password: "divya123",
-        phone: "+91-9876543222",
-        age: 25,
-        gender: "female",
-        weight: 62,
-        height: 165,
       },
     ]
 
     const patients = []
-    for (const patData of patientsData) {
-      const patient = new Patient({
-        name: patData.name,
-        email: patData.email,
-        password: patData.password,
-        phone: patData.phone,
+    for (const entry of patientsSeed) {
+      const patient = await Patient.create({
+        name: entry.name,
+        email: entry.email,
+        password: entry.password,
+        phone: entry.phone,
         role: "patient",
-        age: patData.age,
-        gender: patData.gender,
-        weight: patData.weight,
-        height: patData.height,
+        age: entry.age,
+        gender: entry.gender,
+        weight: entry.weight,
+        height: entry.height,
       })
-      await patient.save()
+
       patient.patientId = patient.userId
       await patient.save()
       patients.push(patient)
-      console.log(`✅ ${patient.name} (${patient.email} / ${patData.password})`)
     }
 
-    // Create Doctor Schedules
-    console.log("\n📅 Creating Doctor Schedules...")
-    const today = new Date()
-    const scheduleCount = { total: 0 }
+    const approvedDoctors = doctors.filter((doctor) => doctor.is_approved)
+    const today = startOfDay(new Date())
 
-    for (const doctor of doctors.filter((d) => d.is_approved)) {
-      // Create schedules for next 14 days
-      for (let i = 0; i < 14; i++) {
-        const scheduleDate = new Date(today)
-        scheduleDate.setDate(today.getDate() + i)
+    let scheduleCount = 0
+    for (const doctor of approvedDoctors) {
+      for (let dayOffset = 1; dayOffset <= 14; dayOffset += 1) {
+        const date = addDays(today, dayOffset)
+        if (isWeekend(date)) {
+          continue
+        }
 
-        // Skip weekends
-        if (scheduleDate.getDay() === 0 || scheduleDate.getDay() === 6) continue
-
-        // Create time slots from 9 AM to 5 PM
-        const timeSlots = [
-          { start: "09:00", end: "09:30" },
-          { start: "09:30", end: "10:00" },
-          { start: "10:00", end: "10:30" },
-          { start: "10:30", end: "11:00" },
-          { start: "11:00", end: "11:30" },
-          { start: "11:30", end: "12:00" },
-          { start: "14:00", end: "14:30" },
-          { start: "14:30", end: "15:00" },
-          { start: "15:00", end: "15:30" },
-          { start: "15:30", end: "16:00" },
-          { start: "16:00", end: "16:30" },
-          { start: "16:30", end: "17:00" },
-        ]
-
-        for (const slot of timeSlots) {
-          const schedule = new DoctorSchedule({
+        for (const [start, end] of APPOINTMENT_SLOTS) {
+          await DoctorSchedule.create({
             doctor_id: doctor.doctorId,
-            date: scheduleDate,
-            start_time: slot.start,
-            end_time: slot.end,
+            date,
+            start_time: start,
+            end_time: end,
             is_booked: false,
           })
-          await schedule.save()
-          scheduleCount.total++
+          scheduleCount += 1
         }
       }
     }
-    console.log(`✅ Created ${scheduleCount.total} schedule slots`)
 
-    // Create Appointments
-    console.log("\n📋 Creating Appointments...")
-    const appointmentsData = [
-      // Tomorrow's appointments
+    const firstBusinessOffset = firstWorkingDayOffset(today, 1)
+    const secondBusinessOffset = firstWorkingDayOffset(today, firstBusinessOffset + 1)
+    const thirdBusinessOffset = firstWorkingDayOffset(today, secondBusinessOffset + 1)
+    const fourthBusinessOffset = firstWorkingDayOffset(today, thirdBusinessOffset + 1)
+
+    const appointmentsSeed = [
       {
         patient: patients[0],
-        doctor: doctors[0],
-        daysFromNow: 1,
+        doctor: approvedDoctors[0],
+        daysFromNow: firstBusinessOffset,
         time: "09:00",
         status: "Scheduled",
-      },
-      {
-        patient: patients[0],
-        doctor: doctors[1],
-        daysFromNow: 1,
-        time: "14:30",
-        status: "Scheduled",
+        notes: "Follow-up for irregular cycle",
       },
       {
         patient: patients[1],
-        doctor: doctors[2],
-        daysFromNow: 1,
+        doctor: approvedDoctors[1],
+        daysFromNow: firstBusinessOffset,
         time: "10:30",
         status: "Scheduled",
-      },
-      // Day after tomorrow's appointments
-      {
-        patient: patients[0],
-        doctor: doctors[0],
-        daysFromNow: 2,
-        time: "10:00",
-        status: "Scheduled",
+        notes: "Preconception counseling",
       },
       {
         patient: patients[2],
-        doctor: doctors[1],
-        daysFromNow: 2,
-        time: "11:00",
-        status: "Scheduled",
-      },
-      {
-        patient: patients[1],
-        doctor: doctors[0],
-        daysFromNow: 2,
-        time: "15:00",
-        status: "Scheduled",
-      },
-      // Future appointments
-      {
-        patient: patients[0],
-        doctor: doctors[1],
-        daysFromNow: 5,
+        doctor: approvedDoctors[2],
+        daysFromNow: secondBusinessOffset,
         time: "14:00",
         status: "Scheduled",
+        notes: "PCOS symptom review",
       },
       {
-        patient: patients[1],
-        doctor: doctors[0],
-        daysFromNow: 3,
-        time: "11:30",
+        patient: patients[3],
+        doctor: approvedDoctors[0],
+        daysFromNow: thirdBusinessOffset,
+        time: "15:30",
         status: "Scheduled",
+        notes: "Thyroid-related menstrual concerns",
       },
-      {
-        patient: patients[2],
-        doctor: doctors[2],
-        daysFromNow: 4,
-        time: "09:30",
-        status: "Scheduled",
-      },
-      // Past appointments
       {
         patient: patients[0],
-        doctor: doctors[0],
+        doctor: approvedDoctors[1],
         daysFromNow: -5,
-        time: "15:00",
+        time: "11:00",
         status: "Completed",
-      },
-      {
-        patient: patients[1],
-        doctor: doctors[1],
-        daysFromNow: -10,
-        time: "10:30",
-        status: "Completed",
+        notes: "Medication adjusted after consultation",
       },
       {
         patient: patients[2],
-        doctor: doctors[0],
-        daysFromNow: -3,
-        time: "09:00",
+        doctor: approvedDoctors[0],
+        daysFromNow: -12,
+        time: "09:30",
         status: "Completed",
+        notes: "Routine gynecology check completed",
+      },
+      {
+        patient: patients[1],
+        doctor: approvedDoctors[2],
+        daysFromNow: fourthBusinessOffset,
+        time: "16:00",
+        status: "Cancelled",
+        notes: "Patient requested reschedule",
       },
     ]
 
-    for (const aptData of appointmentsData) {
-      const aptDate = new Date(today)
-      aptDate.setDate(today.getDate() + aptData.daysFromNow)
+    let appointmentCount = 0
+    for (const entry of appointmentsSeed) {
+      const appointmentDate = addDays(today, entry.daysFromNow)
 
-      const appointment = new Appointment({
-        patientId: aptData.patient.patientId,
-        doctorId: aptData.doctor.doctorId,
-        date: aptDate,
-        time: aptData.time,
-        status: aptData.status,
-        notes: aptData.status === "Completed" ? "Consultation completed successfully" : "",
+      await Appointment.create({
+        patientId: entry.patient.patientId,
+        doctorId: entry.doctor.doctorId,
+        date: appointmentDate,
+        time: entry.time,
+        status: entry.status,
+        notes: entry.notes,
       })
-      await appointment.save()
-      console.log(`✅ ${aptData.patient.name} with ${aptData.doctor.name} (${aptData.status})`)
+      appointmentCount += 1
 
-      // Mark schedule as booked if scheduled
-      if (aptData.status === "Scheduled") {
+      if (entry.status === "Scheduled") {
         await DoctorSchedule.findOneAndUpdate(
           {
-            doctor_id: aptData.doctor.doctorId,
+            doctor_id: entry.doctor.doctorId,
             date: {
-              $gte: new Date(aptDate.setHours(0, 0, 0, 0)),
-              $lt: new Date(aptDate.setHours(23, 59, 59, 999)),
+              $gte: startOfDay(appointmentDate),
+              $lte: endOfDay(appointmentDate),
             },
-            start_time: aptData.time,
+            start_time: entry.time,
           },
           { is_booked: true }
         )
       }
     }
 
-    // Create Cycle Data
-    console.log("\n🔄 Creating Cycle Data...")
-    const cyclePatients = [patients[0], patients[1], patients[2]]
+    const flowLevels = ["light", "medium", "heavy"]
+    const symptomPatterns = [
+      ["Cramps", "Fatigue"],
+      ["Mood Swings", "Bloating"],
+      ["Back Pain", "Headache"],
+    ]
 
-    for (const patient of cyclePatients) {
-      // Create 3 past cycles
-      for (let i = 0; i < 3; i++) {
-        const startDate = new Date(today)
-        startDate.setDate(today.getDate() - (28 * (i + 1)))
+    let cycleCount = 0
+    for (const [index, patient] of patients.entries()) {
+      for (let cycleNumber = 0; cycleNumber < 4; cycleNumber += 1) {
+        const startDate = addDays(today, -(cycleNumber * 29 + 6 + index))
+        const endDate = addDays(startDate, 4 + ((cycleNumber + index) % 2))
 
-        const endDate = new Date(startDate)
-        endDate.setDate(startDate.getDate() + 5)
-
-        const flowLevels = ["light", "medium", "heavy"]
-        const symptoms = [
-          ["Cramps", "Fatigue"],
-          ["Headache", "Mood Swings", "Bloating"],
-          ["Back Pain", "Cramps"],
-        ]
-
-        const cycle = new CycleData({
+        await CycleData.create({
           patientId: patient.patientId,
           startDate,
           endDate,
-          flowLevel: flowLevels[i % 3],
-          symptoms: symptoms[i % 3],
+          flowLevel: flowLevels[(cycleNumber + index) % flowLevels.length],
+          symptoms: symptomPatterns[(cycleNumber + index) % symptomPatterns.length],
         })
-        await cycle.save()
+        cycleCount += 1
       }
-      console.log(`✅ Created 3 cycles for ${patient.name}`)
     }
 
-    // Medical Records and Prescriptions removed - features disabled
-
-    // Create Notifications
-    console.log("\n🔔 Creating Notifications...")
-    const notificationsData = [
+    const notificationsSeed = [
       {
-        user: patients[0],
+        userId: patients[0].userId,
         type: "appointment_booked",
-        message: `Appointment booked with ${doctors[0].name} on ${new Date(today.getTime() + 2 * 24 * 60 * 60 * 1000).toLocaleDateString()}`,
+        message: "Appointment confirmed with Dr. Meera Nair.",
       },
       {
-        user: doctors[0],
-        type: "appointment_booked",
-        message: `New appointment with ${patients[0].name}`,
-      },
-      {
-        user: patients[1],
+        userId: patients[1].userId,
         type: "cycle_reminder",
-        message: "Time to log your cycle data",
+        message: "Cycle reminder: please log symptoms for better prediction.",
+      },
+      {
+        userId: doctors[0].userId,
+        type: "appointment_booked",
+        message: "New patient appointment added to your schedule.",
+      },
+      {
+        userId: doctors[3].userId,
+        type: "doctor_approved",
+        message: "Your profile is under review by admin.",
       },
     ]
 
-    for (const notifData of notificationsData) {
-      const notification = new Notification({
-        userId: notifData.user.userId,
-        type: notifData.type,
-        message: notifData.message,
-        is_read: false,
-      })
-      await notification.save()
-    }
-    console.log(`✅ Created ${notificationsData.length} notifications`)
+    await Notification.insertMany(notificationsSeed)
 
-    // Summary
-    console.log("\n" + "=".repeat(70))
-    console.log("✅ DATABASE SEEDED SUCCESSFULLY WITH INDIAN DATA!")
-    console.log("=".repeat(70))
-    console.log("\n📊 Summary:")
-    console.log(`   👤 Admin: 1`)
-    console.log(`   👨‍⚕️ Doctors: ${doctors.length} (${doctors.filter((d) => d.is_approved).length} approved, ${doctors.filter((d) => !d.is_approved).length} pending)`)
-    console.log(`   👩 Patients: ${patients.length}`)
-    console.log(`   📅 Appointments: ${appointmentsData.length}`)
-    console.log(`   🔄 Cycle Records: ${cyclePatients.length * 3}`)
-    console.log(`   🔔 Notifications: ${notificationsData.length}`)
-    console.log(`   📋 Schedule Slots: ${scheduleCount.total}`)
+    console.log("\nDatabase seeded successfully with Indian demo data")
+    console.log("------------------------------------------------------------")
+    console.log(`Admin users      : 1`)
+    console.log(`Doctors          : ${doctors.length} (${approvedDoctors.length} approved)`)
+    console.log(`Patients         : ${patients.length}`)
+    console.log(`Schedule slots   : ${scheduleCount}`)
+    console.log(`Appointments     : ${appointmentCount}`)
+    console.log(`Cycle entries    : ${cycleCount}`)
+    console.log(`Notifications    : ${notificationsSeed.length}`)
 
-    console.log("\n" + "=".repeat(70))
-    console.log("🔑 EASY LOGIN CREDENTIALS (All passwords are simple!)")
-    console.log("=".repeat(70))
-
-    console.log("\n" + "=".repeat(70))
-    console.log("🎓 DEMO ACCOUNTS FOR PROFESSOR (All use password: demo123)")
-    console.log("=".repeat(70))
-    
-    console.log("\n� ADMIN:T")
-    console.log("   Email: demo@admin.com")
-    console.log("   Password: demo123")
-
-    console.log("\n👨‍⚕️ DOCTOR:")
-    console.log("   Email: demo@doctor.com")
-    console.log("   Password: demo123")
-
-    console.log("\n👩 PATIENT:")
-    console.log("   Email: demo@patient.com")
-    console.log("   Password: demo123")
-
-    console.log("\n" + "=".repeat(70))
-    console.log("💡 QUICK DEMO LOGIN (Copy & Paste):")
-    console.log("=".repeat(70))
-    console.log("\n   Admin:   demo@admin.com   / demo123")
-    console.log("   Doctor:  demo@doctor.com  / demo123")
-    console.log("   Patient: demo@patient.com / demo123")
-    console.log("\n" + "=".repeat(70))
+    console.log("\nDemo credentials (all passwords are demo123)")
+    console.log("Admin   : admin@femcare.in")
+    console.log("Doctor  : meera.nair@femcare.in")
+    console.log("Patient : nisha.verma@femcare.in")
 
     process.exit(0)
   } catch (error) {
-    console.error("❌ Error seeding database:", error)
+    console.error("Error seeding database:", error)
     process.exit(1)
   }
 }
