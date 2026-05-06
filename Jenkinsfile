@@ -64,6 +64,8 @@ EOF
                         fi
                     done
                 '''
+                // Remove stale prometheus volume that may have wrong type
+                sh 'docker volume rm femcare_prometheus-data 2>/dev/null || true'
                 // Bring everything up fresh
                 sh 'docker compose -f $COMPOSE_FILE up -d --force-recreate'
             }

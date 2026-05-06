@@ -53,12 +53,14 @@ services:
     image: prom/prometheus:latest
     ports:
       - "9090:9090"
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus-data:/prometheus
+    configs:
+      - source: prometheus_config
+        target: /etc/prometheus/prometheus.yml
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
+    volumes:
+      - prometheus-data:/prometheus
     networks:
       - femcare-network
     restart: unless-stopped
@@ -108,6 +110,10 @@ services:
     networks:
       - femcare-network
     restart: unless-stopped
+
+configs:
+  prometheus_config:
+    file: ./prometheus.yml
 
 volumes:
   mongo-data:
