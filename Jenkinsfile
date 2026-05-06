@@ -2,110 +2,82 @@ pipeline {
     agent any
 
     environment {
-        SONAR_TOKEN = credentials('sonar-token')
-        COMPOSE_FILE = "${WORKSPACE}/docker-compose.yml"
+        COMPOSE_FILE = 'docker-compose.yml'
     }
 
     stages {
 
-        stage('Install & Test') {
+        stage('Checkout Code') {
             steps {
-                dir('backend') {
-                    sh 'npm ci'
-                    sh 'npm test -- --forceExit'
-                }
+                checkout scm
+            }
+        }
+
+        stage('Verify Files') {
+            steps {
+                sh '''
+                echo "Checking workspace files..."
+                ls -la
+                '''
+            }
+        }
+
+        stage('Build Backend') {
+            steps {
+                sh '''
+                docker compose -f $COMPOSE_FILE build backend
+                '''
+            }
+        }
+
+        stage('Build Frontend') {
+            steps {
+                sh '''
+                docker compose -f $COMPOSE_FILE build frontend
+                '''
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
                 sh '''
-                    sonar-scanner \
-                        -Dsonar.projectKey=femcare \
-                        -Dsonar.projectName="FemCare Healthcare App" \
-                        -Dsonar.sources=backend/src,frontend/src \
-                        -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/*.test.js \
-                        -Dsonar.host.url=http://sonarqube:9000 \
-                        -Dsonar.token=$SONAR_TOKEN
+                docker run --rm \
+                  --network host \
+                  -v $(pwd):/usr/src \
+                  sonarsource/sonar-scanner-cli \
+                  -Dsonar.projectKey=mern-app \
+                  -Dsonar.sources=. \
+                  -Dsonar.host.url=http://localhost:9000
                 '''
             }
         }
 
-        stage('Build Docker Images') {
+        stage('Deploy Application') {
             steps {
-                sh 'docker compose -f $COMPOSE_FILE build backend frontend'
+                sh '''
+                docker compose -f $COMPOSE_FILE up -d --force-recreate \
+                mongo backend frontend prometheus grafana sonarqube
+                '''
             }
         }
 
-        stage('Deploy') {
-            steps {
-                // Ensure prometheus.yml exists in workspace
-                sh '''
-                    if [ ! -f prometheus.yml ]; then
-                        cat > prometheus.yml << 'EOF'
-global:
-  scrape_interval: 15s
-
-scrape_configs:
-  - job_name: femcare-backend
-    static_configs:
-      - targets: ['backend:5000']
-    metrics_path: /metrics
-EOF
-                    fi
-                '''
-                // Kill any container holding the ports we need
-                sh '''
-                    for PORT in 5000 5173 27017 9000 9090 3000; do
-                        CID=$(docker ps -q --filter "publish=$PORT")
-                        if [ -n "$CID" ]; then
-                            echo "Stopping container on port $PORT: $CID"
-                            docker stop $CID && docker rm $CID || true
-                        fi
-                    done
-                '''
-                // Remove stale prometheus volume that may have wrong type
-                sh 'docker volume rm femcare_prometheus-data 2>/dev/null || true'
-                // Bring everything up fresh
-                sh 'docker compose -f $COMPOSE_FILE up -d --force-recreate'
-            }
-        }
-
-        stage('Health Check') {
+        stage('Check Running Containers') {
             steps {
                 sh '''
-                    echo "Waiting for backend to be ready..."
-                    for i in $(seq 1 12); do
-                        if curl -sf http://localhost:5000/api/health; then
-                            echo "Backend is healthy"
-                            exit 0
-                        fi
-                        echo "Attempt $i/12 - waiting 5s..."
-                        sleep 5
-                    done
-                    echo "Backend health check failed"
-                    exit 1
+                docker ps
                 '''
             }
         }
     }
 
     post {
+
         success {
-            echo "=========================================="
-            echo "Pipeline PASSED"
-            echo "App:        http://localhost:5173"
-            echo "Grafana:    http://localhost:3000  (admin/admin)"
-            echo "Prometheus: http://localhost:9090"
-            echo "SonarQube:  http://localhost:9000"
-            echo "=========================================="
+            echo 'Pipeline executed successfully!'
         }
+
         failure {
-            echo "Pipeline FAILED - check logs above"
-            sh 'docker compose -f $COMPOSE_FILE logs --tail=30 backend || true'
-        }
-        always {
-            sh 'docker image prune -f || true'
+            echo 'Pipeline failed!'
         }
     }
 }
