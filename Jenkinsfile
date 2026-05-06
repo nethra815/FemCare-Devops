@@ -54,13 +54,18 @@ scrape_configs:
 EOF
                     fi
                 '''
-                // Stop and remove existing app containers to free ports
-                sh 'docker compose -f $COMPOSE_FILE stop backend frontend || true'
-                sh 'docker compose -f $COMPOSE_FILE rm -f backend frontend || true'
-                // Start infra services only if not already running
-                sh 'docker compose -f $COMPOSE_FILE up -d --no-recreate mongo prometheus grafana sonarqube || true'
-                // Deploy fresh app containers
-                sh 'docker compose -f $COMPOSE_FILE up -d --no-deps backend frontend'
+                // Kill any container holding the ports we need
+                sh '''
+                    for PORT in 5000 5173 27017 9000 9090 3000; do
+                        CID=$(docker ps -q --filter "publish=$PORT")
+                        if [ -n "$CID" ]; then
+                            echo "Stopping container on port $PORT: $CID"
+                            docker stop $CID && docker rm $CID || true
+                        fi
+                    done
+                '''
+                // Bring everything up fresh
+                sh 'docker compose -f $COMPOSE_FILE up -d --force-recreate'
             }
         }
 
