@@ -44,7 +44,7 @@ pipeline {
                     JENKINS_CID=$(cat /proc/1/cpuset | grep -o '[a-f0-9]\\{12,\\}' | head -1 || hostname)
 
                     # Stop and remove all compose service containers except Jenkins
-                    for SVC in mongo backend frontend prometheus grafana sonarqube; do
+                    for SVC in mongo backend frontend sonarqube; do
                         CID=$(docker compose -f $COMPOSE_FILE ps -q $SVC 2>/dev/null)
                         if [ -n "$CID" ]; then
                             echo "Removing $SVC container: $CID"
@@ -53,7 +53,7 @@ pipeline {
                     done
 
                     # Also free ports in case containers from other runs are holding them
-                    for PORT in 5000 5173 27017 9000 9090 3000; do
+                    for PORT in 5000 5173 27017 9000; do
                         CID=$(docker ps -q --filter "publish=$PORT")
                         if [ -n "$CID" ]; then
                             echo "Freeing port $PORT from container $CID"
@@ -61,8 +61,8 @@ pipeline {
                         fi
                     done
                 '''
-                // Bring up all services except jenkins
-                sh 'docker compose -f $COMPOSE_FILE up -d mongo backend frontend prometheus grafana sonarqube'
+                // Bring up app + sonarqube only (skip prometheus and grafana for now)
+                sh 'docker compose -f $COMPOSE_FILE up -d mongo backend frontend sonarqube'
             }
         }
 
