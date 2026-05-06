@@ -72,25 +72,25 @@ export default function DoctorDashboard() {
   const handlePrescriptionSubmit = async (e) => {
     e.preventDefault()
     
-    // Store prescription data locally (since backend is disabled)
-    const prescription = {
-      id: Date.now(),
-      patientId: selectedAppointment.patientId,
-      patientName: selectedAppointment.patient_info?.name,
-      doctorId: user.userId,
-      ...prescriptionData,
-      createdAt: new Date().toISOString(),
+    try {
+      const token = localStorage.getItem("token")
+      await axios.post(
+        "http://localhost:5000/api/prescriptions",
+        {
+          patientId: selectedAppointment.patientId,
+          appointmentId: selectedAppointment.appointmentId,
+          ...prescriptionData,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+      
+      setShowPrescriptionForm(false)
+      setSelectedAppointment(null)
+      setPrescriptionData({ diagnosis: "", medication: "", dosage: "", duration: "" })
+      alert("Prescription created successfully!")
+    } catch (error) {
+      alert(error.response?.data?.error || "Failed to create prescription")
     }
-    
-    // Store in localStorage for demo purposes
-    const existingPrescriptions = JSON.parse(localStorage.getItem("prescriptions") || "[]")
-    existingPrescriptions.push(prescription)
-    localStorage.setItem("prescriptions", JSON.stringify(existingPrescriptions))
-    
-    setShowPrescriptionForm(false)
-    setSelectedAppointment(null)
-    setPrescriptionData({ diagnosis: "", medication: "", dosage: "", duration: "" })
-    alert("Prescription created successfully!")
   }
 
 

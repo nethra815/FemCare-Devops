@@ -1,12 +1,31 @@
 import { Link, useLocation, useNavigate } from "react-router-dom"
-import { Heart, Home, Calendar, Activity, FileText, Pill, Search, Users, LogOut, Bell, User, Menu, X } from "lucide-react"
-import { useState } from "react"
+import { Heart, Home, Calendar, Activity, FileText, Pill, Users, LogOut, Bell, Menu, X } from "lucide-react"
+import { useState, useEffect } from "react"
+import axios from "axios"
 
 export default function Sidebar() {
   const location = useLocation()
   const navigate = useNavigate()
   const user = JSON.parse(localStorage.getItem("user") || "{}")
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  useEffect(() => {
+    fetchUnreadCount()
+  }, [location.pathname])
+
+  const fetchUnreadCount = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      if (!token) return
+      const response = await axios.get("http://localhost:5000/api/notifications", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      setUnreadCount(response.data.filter((n) => !n.is_read).length)
+    } catch {
+      // silently fail
+    }
+  }
 
   const handleLogout = () => {
     localStorage.removeItem("token")
@@ -19,13 +38,15 @@ export default function Sidebar() {
   const patientLinks = [
     { path: "/patient/dashboard", icon: Home, label: "Dashboard" },
     { path: "/patient/search-book", icon: Calendar, label: "Book Appointment" },
+    { path: "/patient/appointments", icon: Calendar, label: "My Appointments" },
     { path: "/patient/cycle-tracker", icon: Activity, label: "Cycle Tracker" },
-    { path: "/patient/records", icon: FileText, label: "Medical Records", disabled: true },
-    { path: "/patient/prescriptions", icon: Pill, label: "Prescriptions", disabled: true },
+    { path: "/patient/records", icon: FileText, label: "Medical Records" },
+    { path: "/patient/prescriptions", icon: Pill, label: "Prescriptions" },
   ]
 
   const doctorLinks = [
     { path: "/doctor/dashboard", icon: Home, label: "Dashboard" },
+    { path: "/doctor/appointments", icon: Calendar, label: "All Appointments" },
     { path: "/doctor/patients", icon: Users, label: "My Patients" },
   ]
 
@@ -47,10 +68,7 @@ export default function Sidebar() {
 
       {/* Overlay for mobile */}
       {isMobileMenuOpen && (
-        <div
-          className="lg:hidden fixed inset-0 bg-black/50 z-40"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
+        <div className="lg:hidden fixed inset-0 bg-black/50 z-40" onClick={() => setIsMobileMenuOpen(false)} />
       )}
 
       {/* Sidebar */}
@@ -81,19 +99,6 @@ export default function Sidebar() {
               {links.map((link) => {
                 const Icon = link.icon
                 const active = isActive(link.path)
-                
-                if (link.disabled) {
-                  return (
-                    <div
-                      key={link.path}
-                      className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 cursor-not-allowed opacity-50"
-                    >
-                      <Icon className="w-5 h-5" />
-                      <span className="font-medium">{link.label}</span>
-                    </div>
-                  )
-                }
-                
                 return (
                   <Link
                     key={link.path}
@@ -126,10 +131,18 @@ export default function Sidebar() {
             </div>
 
             <div className="flex gap-2">
-              <button className="flex-1 p-2 rounded-lg hover:bg-gray-100 transition-colors relative">
-                <Bell className="w-5 h-5 text-gray-600 mx-auto" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-pink-500 rounded-full"></span>
-              </button>
+              <Link
+                to={`/${user.role}/notifications`}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex-1 p-2 rounded-lg hover:bg-gray-100 transition-colors relative flex items-center justify-center"
+              >
+                <Bell className="w-5 h-5 text-gray-600" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 w-5 h-5 bg-pink-500 rounded-full text-white text-xs flex items-center justify-center font-bold">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </Link>
               <button
                 onClick={handleLogout}
                 className="flex-1 p-2 rounded-lg hover:bg-red-50 text-red-600 transition-colors"

@@ -26,24 +26,17 @@ export default function AdminDashboard() {
       const token = localStorage.getItem("token")
       const config = { headers: { Authorization: `Bearer ${token}` } }
 
-      // Fetch all doctors (including unapproved ones)
-      // We need to fetch from a different endpoint or modify the doctors endpoint
-      const response = await axios.get("http://localhost:5000/api/doctors?includeUnapproved=true", config)
-      
-      // Separate pending and approved
-      const pending = []
-      const approved = []
-      
-      for (const doctor of response.data) {
-        if (doctor.is_approved) {
-          approved.push(doctor)
-        } else {
-          pending.push(doctor)
-        }
-      }
+      const [doctorsRes, usersRes] = await Promise.all([
+        axios.get("http://localhost:5000/api/doctors?includeUnapproved=true", config),
+        axios.get("http://localhost:5000/api/users/all", config).catch(() => ({ data: [] })),
+      ])
+
+      const pending = doctorsRes.data.filter((d) => !d.is_approved)
+      const approved = doctorsRes.data.filter((d) => d.is_approved)
 
       setPendingDoctors(pending)
       setApprovedDoctors(approved)
+      setAllUsers(usersRes.data)
     } catch (error) {
       console.error("Error fetching data:", error)
     } finally {

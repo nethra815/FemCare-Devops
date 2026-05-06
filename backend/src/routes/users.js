@@ -34,5 +34,17 @@ router.get("/me", authenticate, async (req, res, next) => {
   }
 })
 
+router.get("/all", authenticate, async (req, res, next) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ error: "Unauthorized" })
+    }
+    const users = await User.find({}).select("-password").sort({ created_at: -1 })
+    res.json(users)
+  } catch (error) {
+    next(error)
+  }
+})
+
 
 export default router

@@ -25,9 +25,10 @@ export default function PatientDashboard() {
       const token = localStorage.getItem("token")
       const config = { headers: { Authorization: `Bearer ${token}` } }
 
-      const [appointmentsRes, cyclesRes] = await Promise.all([
+      const [appointmentsRes, cyclesRes, prescriptionsRes] = await Promise.all([
         axios.get(`http://localhost:5000/api/appointments?patientId=${userId}&past_or_upcoming=upcoming`, config),
         axios.get("http://localhost:5000/api/cycles", config),
+        axios.get("http://localhost:5000/api/prescriptions", config),
       ])
 
       setAppointments(appointmentsRes.data.slice(0, 3))
@@ -35,7 +36,7 @@ export default function PatientDashboard() {
         upcomingAppointments: appointmentsRes.data.length,
         cycleData: cyclesRes.data[0] || null,
         recentRecords: 0,
-        prescriptions: 0,
+        prescriptions: prescriptionsRes.data.length,
       })
     } catch (error) {
       console.error("Error fetching dashboard data:", error)

@@ -1,15 +1,22 @@
-FROM node:18
+FROM node:18 AS builder
 
 WORKDIR /app
 
 COPY package*.json ./
-
 RUN npm ci --include=optional
 
 COPY . .
-
 RUN npm run build
+
+# Serve with a lightweight static server
+FROM node:18-alpine
+
+WORKDIR /app
+
+RUN npm install -g serve
+
+COPY --from=builder /app/dist ./dist
 
 EXPOSE 5173
 
-CMD ["npm", "run", "dev"]
+CMD ["serve", "-s", "dist", "-l", "5173"]

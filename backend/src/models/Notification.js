@@ -13,7 +13,7 @@ const notificationSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ["appointment_booked", "appointment_cancelled", "appointment_completed", "doctor_approved", "cycle_reminder"],
+    enum: ["appointment_booked", "appointment_cancelled", "appointment_completed", "doctor_approved", "cycle_reminder", "prescription_created"],
   },
   message: {
     type: String,

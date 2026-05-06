@@ -9,6 +9,7 @@ import Doctor from "../models/Doctor.js"
 import Administrator from "../models/Administrator.js"
 import Appointment from "../models/Appointment.js"
 import CycleData from "../models/CycleData.js"
+import Prescription from "../models/Prescription.js"
 import Notification from "../models/Notification.js"
 import DoctorSchedule from "../models/DoctorSchedule.js"
 
@@ -96,6 +97,7 @@ const seedDatabase = async () => {
     await User.deleteMany({})
     await Appointment.deleteMany({})
     await CycleData.deleteMany({})
+    await Prescription.deleteMany({})
     await Notification.deleteMany({})
     await DoctorSchedule.deleteMany({})
     console.log("Existing data cleared")
@@ -401,6 +403,48 @@ const seedDatabase = async () => {
 
     await Notification.insertMany(notificationsSeed)
 
+    // Prescriptions
+    const prescriptionsSeed = [
+      {
+        patientId: patients[0].patientId,
+        doctorId: approvedDoctors[0].doctorId,
+        diagnosis: "Iron deficiency anemia",
+        medication: "Ferrous Sulfate 325mg",
+        dosage: "1 tablet daily with food",
+        duration: "3 months",
+      },
+      {
+        patientId: patients[0].patientId,
+        doctorId: approvedDoctors[1].doctorId,
+        diagnosis: "Menstrual cramps",
+        medication: "Ibuprofen 400mg",
+        dosage: "1 tablet every 6 hours as needed",
+        duration: "During menstruation",
+      },
+      {
+        patientId: patients[1].patientId,
+        doctorId: approvedDoctors[0].doctorId,
+        diagnosis: "Vitamin D deficiency",
+        medication: "Vitamin D3 2000 IU",
+        dosage: "1 capsule daily",
+        duration: "6 months",
+      },
+      {
+        patientId: patients[2].patientId,
+        doctorId: approvedDoctors[2].doctorId,
+        diagnosis: "PCOS management",
+        medication: "Metformin 500mg",
+        dosage: "1 tablet twice daily with meals",
+        duration: "Ongoing",
+      },
+    ]
+
+    let prescriptionCount = 0
+    for (const p of prescriptionsSeed) {
+      await Prescription.create(p)
+      prescriptionCount += 1
+    }
+
     console.log("\nDatabase seeded successfully with Indian demo data")
     console.log("------------------------------------------------------------")
     console.log(`Admin users      : 1`)
@@ -409,6 +453,7 @@ const seedDatabase = async () => {
     console.log(`Schedule slots   : ${scheduleCount}`)
     console.log(`Appointments     : ${appointmentCount}`)
     console.log(`Cycle entries    : ${cycleCount}`)
+    console.log(`Prescriptions    : ${prescriptionCount}`)
     console.log(`Notifications    : ${notificationsSeed.length}`)
 
     console.log("\nDemo credentials (all passwords are demo123)")

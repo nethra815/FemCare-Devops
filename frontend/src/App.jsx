@@ -6,11 +6,15 @@ import Register from "./pages/Register"
 import RegisterDoctor from "./pages/RegisterDoctor"
 import PatientDashboard from "./pages/PatientDashboard"
 import PatientAppointments from "./pages/PatientAppointments"
+import PatientRecords from "./pages/PatientRecords"
+import PatientPrescriptions from "./pages/PatientPrescriptions"
 import DoctorDashboard from "./pages/DoctorDashboard"
+import DoctorAppointments from "./pages/DoctorAppointments"
 import AdminDashboard from "./pages/AdminDashboard"
 import SearchAndBook from "./pages/SearchAndBook"
 import CycleTracker from "./pages/CycleTracker"
 import DoctorPatients from "./pages/DoctorPatients"
+import Notifications from "./pages/Notifications"
 import ProtectedRoute from "./components/ProtectedRoute"
 import Layout from "./components/Layout"
 
@@ -87,6 +91,36 @@ function App() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/patient/records"
+        element={
+          <ProtectedRoute user={user} requiredRole="patient">
+            <Layout>
+              <PatientRecords />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/patient/prescriptions"
+        element={
+          <ProtectedRoute user={user} requiredRole="patient">
+            <Layout>
+              <PatientPrescriptions />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/patient/notifications"
+        element={
+          <ProtectedRoute user={user} requiredRole="patient">
+            <Layout>
+              <Notifications />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
 
       {/* Doctor Routes with Layout */}
       <Route
@@ -100,11 +134,31 @@ function App() {
         }
       />
       <Route
+        path="/doctor/appointments"
+        element={
+          <ProtectedRoute user={user} requiredRole="doctor">
+            <Layout>
+              <DoctorAppointments />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/doctor/patients"
         element={
           <ProtectedRoute user={user} requiredRole="doctor">
             <Layout>
               <DoctorPatients />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/doctor/notifications"
+        element={
+          <ProtectedRoute user={user} requiredRole="doctor">
+            <Layout>
+              <Notifications />
             </Layout>
           </ProtectedRoute>
         }
