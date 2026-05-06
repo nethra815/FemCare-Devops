@@ -4,6 +4,7 @@ pipeline {
     environment {
         SONAR_TOKEN = credentials('sonar-token')
         COMPOSE_FILE = "${WORKSPACE}/docker-compose.yml"
+        COMPOSE_PROJECT_NAME = "healthcare-mern"
     }
 
     stages {
