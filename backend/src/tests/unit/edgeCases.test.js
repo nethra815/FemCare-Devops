@@ -105,7 +105,7 @@ describe("Real Edge Cases - Unit Tests", () => {
       expect(validatePhone("+91-9876543210")).toBe(true)
       expect(validatePhone("9876543210")).toBe(true)
       expect(validatePhone("98765")).toBe(false)
-      expect(validatePhone("12345abcde")).toBe(true)
+      expect(validatePhone("12345abcde")).toBe(false)
     })
   })
 

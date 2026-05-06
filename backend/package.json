@@ -10,9 +10,9 @@
     "seed:indian": "node src/scripts/seedIndian.js",
     "clean": "node src/scripts/cleanDatabase.js",
     "fix-indexes": "node src/scripts/fixIndexes.js",
-    "test": "mocha",
-    "test:unit": "mocha",
-    "test:watch": "mocha --watch"
+    "test": "jest",
+    "test:unit": "jest",
+    "test:watch": "jest --watch"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

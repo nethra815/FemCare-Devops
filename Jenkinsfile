@@ -3,9 +3,7 @@ pipeline {
 
     environment {
         SONAR_TOKEN = credentials('sonar-token')
-        DOCKER_IMAGE_BACKEND  = "nethra0810/femcare-backend"
-        DOCKER_IMAGE_FRONTEND = "nethra0810/femcare-frontend"
-        IMAGE_TAG = "${BUILD_NUMBER}"
+        COMPOSE_FILE = "${WORKSPACE}/docker-compose.yml"
     }
 
     stages {
@@ -20,7 +18,7 @@ pipeline {
             steps {
                 dir('backend') {
                     sh 'npm ci'
-                    sh 'npm test'
+                    sh 'npm test -- --forceExit'
                 }
             }
         }
@@ -41,23 +39,30 @@ pipeline {
 
         stage('Build Docker Images') {
             steps {
-                sh "docker compose build"
+                sh 'docker compose -f $COMPOSE_FILE build backend frontend'
             }
         }
 
         stage('Deploy') {
             steps {
-                sh "docker compose up -d"
+                sh 'docker compose -f $COMPOSE_FILE up -d --remove-orphans'
             }
         }
 
         stage('Health Check') {
             steps {
                 sh '''
-                    echo "Waiting for services to start..."
-                    sleep 15
-                    curl -f http://backend:5000/api/health || exit 1
-                    echo "Backend is healthy"
+                    echo "Waiting for backend to be ready..."
+                    for i in $(seq 1 12); do
+                        if curl -sf http://localhost:5000/api/health; then
+                            echo "Backend is healthy"
+                            exit 0
+                        fi
+                        echo "Attempt $i/12 - waiting 5s..."
+                        sleep 5
+                    done
+                    echo "Backend health check failed"
+                    exit 1
                 '''
             }
         }
@@ -65,17 +70,20 @@ pipeline {
 
     post {
         success {
-            echo "Pipeline succeeded. App running at http://localhost:5173"
+            echo "=========================================="
+            echo "Pipeline PASSED"
+            echo "App:        http://localhost:5173"
             echo "Grafana:    http://localhost:3000  (admin/admin)"
             echo "Prometheus: http://localhost:9090"
             echo "SonarQube:  http://localhost:9000"
+            echo "=========================================="
         }
         failure {
-            echo "Pipeline failed. Check logs above."
-            sh "docker compose logs --tail=50 || true"
+            echo "Pipeline FAILED - check logs above"
+            sh 'docker compose -f $COMPOSE_FILE logs --tail=30 backend || true'
         }
         always {
-            sh "docker system prune -f || true"
+            sh 'docker image prune -f || true'
         }
     }
 }

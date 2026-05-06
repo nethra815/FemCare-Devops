@@ -27,4 +27,5 @@ RUN apt-get update && apt-get install -y unzip && \
     rm /tmp/sonar-scanner.zip && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-USER jenkins
+# Stay as root so docker.sock is always accessible (Docker Desktop on Windows)
+# jenkins user is still used for Jenkins internals via JENKINS_HOME
