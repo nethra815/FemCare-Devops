@@ -39,10 +39,28 @@ pipeline {
 
         stage('Deploy') {
             steps {
+                // Ensure prometheus.yml exists in workspace
+                sh '''
+                    if [ ! -f prometheus.yml ]; then
+                        cat > prometheus.yml << 'EOF'
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: femcare-backend
+    static_configs:
+      - targets: ['backend:5000']
+    metrics_path: /metrics
+EOF
+                    fi
+                '''
+                // Stop and remove existing app containers to free ports
+                sh 'docker compose -f $COMPOSE_FILE stop backend frontend || true'
+                sh 'docker compose -f $COMPOSE_FILE rm -f backend frontend || true'
                 // Start infra services only if not already running
                 sh 'docker compose -f $COMPOSE_FILE up -d --no-recreate mongo prometheus grafana sonarqube || true'
-                // Always recreate app containers with the freshly built images
-                sh 'docker compose -f $COMPOSE_FILE up -d --force-recreate --no-deps backend frontend'
+                // Deploy fresh app containers
+                sh 'docker compose -f $COMPOSE_FILE up -d --no-deps backend frontend'
             }
         }
 
