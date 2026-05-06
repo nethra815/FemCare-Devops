@@ -39,7 +39,10 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                sh 'docker compose -f $COMPOSE_FILE up -d --no-deps --remove-orphans backend frontend mongo'
+                // Start infra services only if not already running
+                sh 'docker compose -f $COMPOSE_FILE up -d --no-recreate mongo prometheus grafana sonarqube || true'
+                // Always recreate app containers with the freshly built images
+                sh 'docker compose -f $COMPOSE_FILE up -d --force-recreate --no-deps backend frontend'
             }
         }
 
