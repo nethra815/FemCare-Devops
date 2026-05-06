@@ -25,7 +25,7 @@ pipeline {
                         -Dsonar.projectName="FemCare Healthcare App" \
                         -Dsonar.sources=backend/src,frontend/src \
                         -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/*.test.js \
-                        -Dsonar.host.url=http://femcare-sonarqube:9000 \
+                        -Dsonar.host.url=http://sonarqube:9000 \
                         -Dsonar.token=$SONAR_TOKEN
                 '''
             }
@@ -39,18 +39,30 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                // Remove any container using our ports (from any previous run)
                 sh '''
+                    # Get the ID of the Jenkins container running this pipeline
+                    JENKINS_CID=$(cat /proc/1/cpuset | grep -o '[a-f0-9]\\{12,\\}' | head -1 || hostname)
+
+                    # Stop and remove all compose service containers except Jenkins
+                    for SVC in mongo backend frontend prometheus grafana sonarqube; do
+                        CID=$(docker compose -f $COMPOSE_FILE ps -q $SVC 2>/dev/null)
+                        if [ -n "$CID" ]; then
+                            echo "Removing $SVC container: $CID"
+                            docker rm -f $CID || true
+                        fi
+                    done
+
+                    # Also free ports in case containers from other runs are holding them
                     for PORT in 5000 5173 27017 9000 9090 3000; do
                         CID=$(docker ps -q --filter "publish=$PORT")
                         if [ -n "$CID" ]; then
-                            echo "Removing container on port $PORT"
+                            echo "Freeing port $PORT from container $CID"
                             docker rm -f $CID || true
                         fi
                     done
                 '''
-                // Deploy all services fresh
-                sh 'docker compose -f $COMPOSE_FILE up -d --force-recreate'
+                // Bring up all services except jenkins
+                sh 'docker compose -f $COMPOSE_FILE up -d mongo backend frontend prometheus grafana sonarqube'
             }
         }
 

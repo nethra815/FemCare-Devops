@@ -1,7 +1,6 @@
 services:
   mongo:
     image: mongo:7
-    container_name: femcare-mongo
     ports:
       - "27017:27017"
     volumes:
@@ -19,12 +18,11 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: femcare-backend
     ports:
       - "5000:5000"
     environment:
       - NODE_ENV=production
-      - MONGODB_URI=mongodb://femcare-mongo:27017/femcare
+      - MONGODB_URI=mongodb://mongo:27017/femcare
       - JWT_SECRET=femcare-secret-key-2024
       - PORT=5000
     depends_on:
@@ -38,7 +36,6 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: femcare-frontend
     ports:
       - "5173:5173"
     depends_on:
@@ -49,7 +46,6 @@ services:
 
   prometheus:
     image: prom/prometheus:latest
-    container_name: femcare-prometheus
     ports:
       - "9090:9090"
     volumes:
@@ -66,7 +62,6 @@ services:
 
   grafana:
     image: grafana/grafana:latest
-    container_name: femcare-grafana
     ports:
       - "3000:3000"
     environment:
@@ -83,7 +78,6 @@ services:
 
   sonarqube:
     image: sonarqube:community
-    container_name: femcare-sonarqube
     ports:
       - "9000:9000"
     environment:
@@ -100,7 +94,6 @@ services:
     build:
       context: ./jenkins
       dockerfile: Dockerfile
-    container_name: femcare-jenkins
     user: root
     ports:
       - "8080:8080"
