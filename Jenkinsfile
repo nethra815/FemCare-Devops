@@ -39,7 +39,7 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                sh 'docker compose -f $COMPOSE_FILE up -d --remove-orphans'
+                sh 'docker compose -f $COMPOSE_FILE up -d --no-deps --remove-orphans backend frontend mongo'
             }
         }
 
