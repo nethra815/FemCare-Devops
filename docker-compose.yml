@@ -113,7 +113,9 @@ services:
 
   # Jenkins CI/CD
   jenkins:
-    image: jenkins/jenkins:lts
+    build:
+      context: ./jenkins
+      dockerfile: Dockerfile
     container_name: femcare-jenkins
     ports:
       - "8080:8080"
@@ -121,8 +123,8 @@ services:
     volumes:
       - jenkins-data:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      - DOCKER_HOST=unix:///var/run/docker.sock
+    group_add:
+      - "999"
     networks:
       - femcare-network
     restart: unless-stopped

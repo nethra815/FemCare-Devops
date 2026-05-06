@@ -41,13 +41,13 @@ pipeline {
 
         stage('Build Docker Images') {
             steps {
-                sh "docker-compose build"
+                sh "docker compose build"
             }
         }
 
         stage('Deploy') {
             steps {
-                sh "docker-compose up -d"
+                sh "docker compose up -d"
             }
         }
 
@@ -56,7 +56,7 @@ pipeline {
                 sh '''
                     echo "Waiting for services to start..."
                     sleep 15
-                    curl -f http://localhost:5000/api/health || exit 1
+                    curl -f http://backend:5000/api/health || exit 1
                     echo "Backend is healthy"
                 '''
             }
@@ -72,7 +72,7 @@ pipeline {
         }
         failure {
             echo "Pipeline failed. Check logs above."
-            sh "docker-compose logs --tail=50"
+            sh "docker compose logs --tail=50 || true"
         }
         always {
             sh "docker system prune -f || true"
