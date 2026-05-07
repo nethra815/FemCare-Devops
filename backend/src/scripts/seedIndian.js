@@ -115,7 +115,7 @@ const seedDatabase = async () => {
 
     const doctorsSeed = [
       {
-        name: "Dr. Meera Nair",
+        name: "Meera Nair",
         email: "meera.nair@femcare.in",
         password: "demo123",
         phone: "+91-9000010001",
@@ -125,7 +125,7 @@ const seedDatabase = async () => {
         is_approved: true,
       },
       {
-        name: "Dr. Priyanka Sharma",
+        name: "Priyanka Sharma",
         email: "priyanka.sharma@femcare.in",
         password: "demo123",
         phone: "+91-9000010002",
@@ -135,7 +135,7 @@ const seedDatabase = async () => {
         is_approved: true,
       },
       {
-        name: "Dr. Kavita Kulkarni",
+        name: "Kavita Kulkarni",
         email: "kavita.kulkarni@femcare.in",
         password: "demo123",
         phone: "+91-9000010003",
@@ -145,7 +145,7 @@ const seedDatabase = async () => {
         is_approved: true,
       },
       {
-        name: "Dr. Rhea Choudhury",
+        name: "Rhea Choudhury",
         email: "rhea.choudhury@femcare.in",
         password: "demo123",
         phone: "+91-9000010004",
