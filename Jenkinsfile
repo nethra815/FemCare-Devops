@@ -20,15 +20,18 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                sh '''
-                    sonar-scanner \
+                dir('backend') {
+                    sh '''
+                        sonar-scanner \
                         -Dsonar.projectKey=femcare \
                         -Dsonar.projectName="FemCare Healthcare App" \
-                        -Dsonar.sources=backend/src,frontend/src \
-                        -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/*.test.js \
+                        -Dsonar.sources=src \
+                        -Dsonar.exclusions=**/node_modules/** \
                         -Dsonar.host.url=http://sonarqube:9000 \
-                        -Dsonar.token=$SONAR_TOKEN
-                '''
+                        -Dsonar.token=$SONAR_TOKEN \
+                        -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+                    '''
+                }
             }
         }
 
