@@ -71,7 +71,7 @@ export default function PatientDashboard() {
 
         {/* Stats Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="card bg-gradient-to-br from-pink-500 to-pink-600 text-white">
+          <div className="card bg-gradient-to-br from-blue-500 to-blue-600 text-white">
             <div className="flex items-center justify-between mb-4">
               <Calendar className="w-8 h-8" />
               <span className="text-3xl font-bold">{stats.upcomingAppointments}</span>
@@ -87,7 +87,7 @@ export default function PatientDashboard() {
             <p className="text-purple-100">Cycle Tracking</p>
           </div>
 
-          <div className="card bg-gradient-to-br from-indigo-500 to-indigo-600 text-white">
+          <div className="card bg-gradient-to-br from-pink-500 to-pink-600 text-white">
             <div className="flex items-center justify-between mb-4">
               <FileText className="w-8 h-8" />
               <span className="text-3xl font-bold">{stats.recentRecords}</span>
